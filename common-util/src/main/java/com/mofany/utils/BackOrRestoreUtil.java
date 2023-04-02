@@ -135,16 +135,4 @@ public class BackOrRestoreUtil {
         String[] cmd = {shell, c, command};
         return cmd;
     }
-
-    /**
-     * 测试类
-     */
-    public static void main(String[] args) {
-        // 获取系统名
-        String currentOS = System.getProperty(CURRENT_OS_NAME);
-        // 输出当前系统
-        System.out.println(currentOS);
-        // 当前系统是否为指定系统
-        System.out.println(currentOS.toLowerCase().startsWith(WINDOWS));
-    }
 }
