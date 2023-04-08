@@ -1,6 +1,9 @@
 package com.mofany.utils;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -34,8 +37,22 @@ public class BackOrRestoreUtil {
      */
     private static final Logger logger = Logger.getGlobal();
 
+
     /**
-     * 备份数据库到指定到文件中
+     * 数据库名处理
+     */
+    public static String filterDatabases(List<String> databaseList) {
+        String[] databaseArray = new String[databaseList.size()];
+        databaseList.toArray(databaseArray);
+        String databases = Arrays.toString(databaseArray)
+                .replace("[", "")
+                .replace("]", "")
+                .replaceAll(",", "");
+        return databases;
+    }
+
+    /**
+     * 备份单个数据库或者备份多个数据库到一个文件
      *
      * @param host           host地址
      * @param username       用户名
@@ -51,6 +68,7 @@ public class BackOrRestoreUtil {
      * --default-character-set=utf8 target_database_name # 要备份的目标数据库
      */
     public static boolean backup(String host, String username, String password, String backupFilePath, String database) throws IOException, InterruptedException {
+
         // 通过StringBuilder拼接Mysql备份命令
         StringBuilder stringBuilder = new StringBuilder();
         // 拼接备份命令
@@ -60,8 +78,10 @@ public class BackOrRestoreUtil {
                 .append(" -u").append(username)
                 .append(" -p").append(password);
         // 拼接备份后的结果集存放文件与要备份的数据库
-        stringBuilder.append(" --result-file=").append(backupFilePath)
-                .append(" --default-character-set=utf8 ").append(database);
+        stringBuilder
+                .append(" --result-file=").append(backupFilePath)
+                .append(" --default-character-set=utf8")
+                .append(" --databases ").append(database);
         // 返回命令行参数
         String[] cmdArray = getCommand(stringBuilder.toString());
         // 调用外部执行exe文件的java api
@@ -77,7 +97,7 @@ public class BackOrRestoreUtil {
     }
 
     /**
-     * 恢复数据库备份文件
+     * 恢复单个数据库
      *
      * @param restoreFilePath 备份文件所在路径地址
      * @param host            host地址
@@ -101,6 +121,43 @@ public class BackOrRestoreUtil {
         // 拼接要恢复的目标数据库与执行恢复的文件
         stringBuilder.append(" ").append(database)
                 .append(" < ").append(restoreFilePath);
+
+        // 返回命令行参数
+        String[] cmdArray = getCommand(stringBuilder.toString());
+        // TODO 调用exec命令执行恢复,前提是要恢复的数据库必须存在且与创建的数据库同名
+        Process process = Runtime.getRuntime().exec(cmdArray);
+        // 值 0 表示线程正常终止，此进程对象表示的子进程的退出值
+        if (process.waitFor() == 0) {
+            // 数据已经恢复到指定路径
+            logger.info("数据已从：" + restoreFilePath + " 导入到数据库中");
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 恢复备份的全部数据库
+     *
+     * @param restoreFilePath 备份文件所在路径地址
+     * @param host            host地址
+     * @param username        用户名
+     * @param password        密码
+     * @return
+     * @throws Exception
+     * @@description mysql -h localhost   # 主机地址
+     * -u root        # 用户名
+     * -p 123456      # 密码
+     * target_database_name < database_file.sql # 将SQL脚本文件还原为指定的数据库
+     */
+    public static boolean restore(String restoreFilePath, String host, String username, String password) throws IOException, InterruptedException {
+        StringBuilder stringBuilder = new StringBuilder();
+        // 拼接恢复命令
+        stringBuilder.append("mysql")
+                .append(" -h").append(host)
+                .append(" -u").append(username)
+                .append(" -p").append(password);
+        // 拼接要恢复的目标数据库与执行恢复的文件
+        stringBuilder.append(" < ").append(restoreFilePath);
 
         // 返回命令行参数
         String[] cmdArray = getCommand(stringBuilder.toString());
